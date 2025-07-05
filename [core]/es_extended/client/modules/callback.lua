@@ -10,6 +10,8 @@ Callbacks.requests = {}
 Callbacks.storage = {}
 Callbacks.id = 0
 
+local usingOxLib = lib and lib.callback ~= nil
+
 -- =============================================
 -- MARK: Internal Functions
 -- =============================================
@@ -87,8 +89,13 @@ end
 function ESX.TriggerServerCallback(eventName, callback, ...)
     local invokingResource = GetInvokingResource()
     local invoker = (invokingResource and invokingResource ~= "unknown") and invokingResource or "es_extended"
-
-    Callbacks:Trigger(eventName, callback, invoker, ...)
+    if usingOxLib then
+        lib.callback(eventName, function(...)
+            if callback then callback(...) end
+        end, ...)
+    else
+        Callbacks:Trigger(eventName, callback, invoker, ...)
+    end
 end
 
 ---@param eventName string
@@ -97,27 +104,33 @@ end
 function ESX.AwaitServerCallback(eventName, ...)
     local invokingResource = GetInvokingResource()
     local invoker = (invokingResource and invokingResource ~= "unknown") and invokingResource or "es_extended"
+    if usingOxLib then
+        return lib.callback.await(eventName, ...)
+    else
+        local p = Callbacks:Trigger(eventName, false, invoker, ...)
+        if not p then return end
 
-    local p = Callbacks:Trigger(eventName, false, invoker, ...)
-    if not p then return end
+        SetTimeout(15000, function()
+            if p.state == "pending" then
+                p:reject("Server Callback Timed Out")
+            end
+        end)
 
-    -- if the server callback takes longer than 15 seconds to respond, reject the promise
-    SetTimeout(15000, function()
-        if p.state == "pending" then
-            p:reject("Server Callback Timed Out")
-        end
-    end)
+        Citizen.Await(p)
 
-    Citizen.Await(p)
-
-    return table.unpack(p.value)
+        return table.unpack(p.value)
+    end
 end
 
 function ESX.RegisterClientCallback(eventName, callback)
     local invokingResource = GetInvokingResource()
     local invoker = (invokingResource and invokingResource ~= "Unknown") and invokingResource or "es_extended"
-
-    Callbacks:Register(eventName, invoker, callback)
+    if usingOxLib then
+        Callbacks.storage[eventName] = { resource = invoker, cb = callback }
+        lib.callback.register(eventName, callback)
+    else
+        Callbacks:Register(eventName, invoker, callback)
+    end
 end
 
 ---@param eventName string
@@ -130,13 +143,15 @@ end
 -- MARK: Events
 -- =============================================
 
-ESX.SecureNetEvent("esx:triggerClientCallback", function(...)
-    Callbacks:ClientRecieve(...)
-end)
+if not usingOxLib then
+    ESX.SecureNetEvent("esx:triggerClientCallback", function(...)
+        Callbacks:ClientRecieve(...)
+    end)
 
-ESX.SecureNetEvent("esx:serverCallback", function(...)
-    Callbacks:ServerRecieve(...)
-end)
+    ESX.SecureNetEvent("esx:serverCallback", function(...)
+        Callbacks:ServerRecieve(...)
+    end)
+end
 
 AddEventHandler("onResourceStop", function(resource)
     for k, v in pairs(Callbacks.storage) do

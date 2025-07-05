@@ -10,6 +10,8 @@ Callbacks.requests = {}
 Callbacks.storage = {}
 Callbacks.id = 0
 
+local usingOxLib = GetResourceState('ox_lib') ~= 'missing' and lib and lib.callback
+
 -- =============================================
 -- MARK: Internal Functions
 -- =============================================
@@ -80,7 +82,14 @@ function ESX.TriggerClientCallback(player, eventName, callback, ...)
     local invokingResource = GetInvokingResource()
     local invoker = (invokingResource and invokingResource ~= "Unknown") and invokingResource or "es_extended"
 
-    Callbacks:Trigger(player, eventName, callback, invoker, ...)
+    if usingOxLib then
+        local result = {lib.callback.await(eventName, player, ...)}
+        if callback then
+            callback(table.unpack(result))
+        end
+    else
+        Callbacks:Trigger(player, eventName, callback, invoker, ...)
+    end
 end
 
 ---@param eventName string
@@ -90,7 +99,12 @@ function ESX.RegisterServerCallback(eventName, callback)
     local invokingResource = GetInvokingResource()
     local invoker = (invokingResource and invokingResource ~= "Unknown") and invokingResource or "es_extended"
 
-    Callbacks:Register(eventName, invoker, callback)
+    if usingOxLib then
+        Callbacks.storage[eventName] = { resource = invoker, cb = callback }
+        lib.callback.register(eventName, callback)
+    else
+        Callbacks:Register(eventName, invoker, callback)
+    end
 end
 
 ---@param eventName string
@@ -103,14 +117,16 @@ end
 -- MARK: Events
 -- =============================================
 
-RegisterNetEvent("esx:clientCallback", function(requestId, invoker, ...)
-    Callbacks:RecieveClient(requestId, invoker, ...)
-end)
+if not usingOxLib then
+    RegisterNetEvent("esx:clientCallback", function(requestId, invoker, ...)
+        Callbacks:RecieveClient(requestId, invoker, ...)
+    end)
 
-RegisterNetEvent("esx:triggerServerCallback", function(eventName, requestId, invoker, ...)
-    local source = source
-    Callbacks:ServerRecieve(source, eventName, requestId, invoker, ...)
-end)
+    RegisterNetEvent("esx:triggerServerCallback", function(eventName, requestId, invoker, ...)
+        local source = source
+        Callbacks:ServerRecieve(source, eventName, requestId, invoker, ...)
+    end)
+end
 
 AddEventHandler("onResourceStop", function(resource)
     for k, v in pairs(Callbacks.storage) do

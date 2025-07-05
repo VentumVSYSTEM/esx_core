@@ -17,3 +17,9 @@ Interested in helping us? [Take a look at our patreon](https://www.patreon.com/e
 | Kyle McShea - Artin - Mathias Christoffersen - Jaylan Yilmaz - Callum |
 | CONGRESS KW - Michael Hein - Smery sitbon - daZepelin - CMF Community |
 ------
+
+### ox_lib Integration
+
+This fork integrates callbacks from [ox_lib](https://github.com/overextended/ox_lib)
+for better performance. Ensure the `ox_lib` resource is installed and started
+before `es_extended`.
