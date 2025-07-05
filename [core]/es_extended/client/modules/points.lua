@@ -39,9 +39,9 @@ function StartPointsLoop()
 					points[handle].leave()
 				end
 			end
-			Wait(500)
-		end
-	end)
+                        Wait(Config.PointsLoopInterval or 500)
+                end
+        end)
 end
 
 
