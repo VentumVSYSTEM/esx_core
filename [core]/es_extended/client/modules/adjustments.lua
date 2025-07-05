@@ -42,19 +42,20 @@ function Adjustments:HealthRegeneration()
 end
 
 function Adjustments:AmmoAndVehicleRewards()
-    CreateThread(function()
-        while true do
-            if Config.DisableDisplayAmmo then
+    if Config.DisableDisplayAmmo then
+        CreateThread(function()
+            while true do
                 DisplayAmmoThisFrame(false)
+                Wait(0)
             end
+        end)
+    end
 
-            if Config.DisableVehicleRewards then
-                DisablePlayerVehicleRewards(ESX.playerId)
-            end
-
-            Wait(0)
-        end
-    end)
+    if Config.DisableVehicleRewards then
+        AddEventHandler("esx:enteredVehicle", function()
+            DisablePlayerVehicleRewards(ESX.playerId)
+        end)
+    end
 end
 
 function Adjustments:EnablePvP()

@@ -52,6 +52,10 @@ Config.DistanceGive = 4.0 -- Max distance when giving items, weapons etc.
 
 Config.AdminLogging = false -- Logs the usage of certain commands by those with group.admin ace permissions (default is false)
 
+-- Thread intervals (in milliseconds)
+Config.PointsLoopInterval = 750 -- Delay between point proximity checks
+Config.PedLoopInterval = 200 -- Delay between player ped checks
+
 -------------------------------------
 -- DO NOT CHANGE BELOW THIS LINE !!!
 -------------------------------------
